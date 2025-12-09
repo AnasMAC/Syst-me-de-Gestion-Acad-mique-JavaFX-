@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.gestionacademique.Controllers.MainController">
+
+    <top>
+        <VBox alignment="CENTER" style="-fx-background-color: #263238; -fx-padding: 15;">
+            <Label text="Système de Gestion Académique" textFill="WHITE">
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
+        </VBox>
+    </top>
+
+    <center>
+        <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" style="-fx-background-color: #ECEFF1;">
+
+            <Tab text="  Gestion Étudiants  ">
+                <content>
+                    <fx:include fx:id="studentView" source="student-view.fxml"/>
+                </content>
+            </Tab>
+
+            <Tab text="  Gestion Formations  ">
+                <content>
+                    <fx:include fx:id="formationView" source="formation-view.fxml"/>
+                </content>
+            </Tab>
+
+        </TabPane>
+    </center>
+
+</BorderPane>
