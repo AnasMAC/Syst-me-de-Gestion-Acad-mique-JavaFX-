@@ -19,11 +19,11 @@ import java.util.stream.Collectors;
 
 public class StudentController implements Initializable {
 
+    @FXML private ComboBox<Formation> cbChoseformation;
     // --- FXML INJECTIONS ---
     @FXML private TextField txtId;
     @FXML private TextField txtName;
     @FXML private TextField txtMoyenne;
-    @FXML private TextField txtFormationId;
 
     @FXML private Button btnAdd;
     @FXML private Button btnUpdate;
@@ -57,6 +57,7 @@ public class StudentController implements Initializable {
             // Bind Lists
             tableStudent.setItems(studentsList);
             cbFilterFormation.setItems(formationsList);
+            cbChoseformation.setItems(formationsList);
 
             // 2. SELECTION LISTENER
             tableStudent.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
@@ -64,7 +65,15 @@ public class StudentController implements Initializable {
                     txtId.setText(String.valueOf(newSelection.getId()));
                     txtName.setText(newSelection.getName());
                     txtMoyenne.setText(String.valueOf(newSelection.getMoyenne()));
-                    txtFormationId.setText(String.valueOf(newSelection.getFormationId()));
+
+                    int targetFormationId = newSelection.getFormationId();
+
+                    Formation matchingFormation = formationsList.stream()
+                            .filter(f -> f.getId() == targetFormationId)
+                            .findFirst()
+                            .orElse(null);
+
+                    cbChoseformation.setValue(matchingFormation);
 
                     btnUpdate.setDisable(false);
                     btnDelete.setDisable(false);
@@ -89,7 +98,7 @@ public class StudentController implements Initializable {
     void onCreate() {
         try {
             // 1. Validation: Empty Fields
-            if (txtName.getText().trim().isEmpty() || txtMoyenne.getText().isEmpty() || txtFormationId.getText().isEmpty()) {
+            if (txtName.getText().trim().isEmpty() || txtMoyenne.getText().isEmpty() || cbChoseformation.getValue()==null) {
                 showError("Validation", "Veuillez remplir tous les champs (Nom, Moyenne, ID Formation).");
                 return;
             }
@@ -106,7 +115,7 @@ public class StudentController implements Initializable {
                     null,
                     txtName.getText(),
                     moyenne,
-                    Integer.parseInt(txtFormationId.getText())
+                    cbChoseformation.getValue().getId()
             );
 
             studentImp.create(student);
@@ -147,7 +156,7 @@ public class StudentController implements Initializable {
                     Integer.parseInt(txtId.getText()),
                     txtName.getText(),
                     moyenne,
-                    Integer.parseInt(txtFormationId.getText())
+                    cbChoseformation.getValue().getId()
             );
 
             studentImp.update(student);
@@ -191,7 +200,7 @@ public class StudentController implements Initializable {
         txtId.clear();
         txtName.clear();
         txtMoyenne.clear();
-        txtFormationId.clear();
+        cbChoseformation.setValue(null);
 
         tableStudent.getSelectionModel().clearSelection();
 

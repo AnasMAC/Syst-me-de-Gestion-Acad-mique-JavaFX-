@@ -44,10 +44,10 @@
             </VBox>
 
             <VBox spacing="5.0">
-                <Label text="ID Formation" textFill="#546E7A">
+                <Label text="Formation" textFill="#546E7A">
                     <font><Font name="System Bold" size="12.0" /></font>
                 </Label>
-                <TextField fx:id="txtFormationId" promptText="Ex: 1" style="-fx-padding: 8; -fx-background-radius: 5;" />
+            <ComboBox fx:id="cbChoseformation" prefWidth="150.0" promptText="Choisir..." />
             </VBox>
 
             <VBox prefHeight="20.0" />
