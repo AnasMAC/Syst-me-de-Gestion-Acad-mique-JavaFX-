@@ -96,19 +96,48 @@ public class StudentImp implements CRUD<Student, Integer> {
                 rs.getInt("formation_id") // Maps SQL "formation_id" to Java "formationId"
         );
     }
-    // Bonus method: Find all students by Formation ID (Required for your UI)
-    public List<Student> findByFormationId(Integer formationId) throws SQLException {
-        List<Student> list = new ArrayList<>();
-        String sql = "SELECT * FROM student WHERE formation_id = ?";
+    public void inscrireEtudiantAuCours(int studentId, int coursId) throws SQLException {
+        String sqlCheck = "SELECT formation_id FROM Student WHERE id = ?";
+        String sqlVerify = "SELECT 1 FROM Formation_Cours WHERE formation_id = ? AND cours_id = ?";
+        String sqlInsert = "INSERT INTO Student_Cours (student_id, cours_id) VALUES (?, ?)";
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, formationId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(mapResultSetToStudent(rs));
-                }
+        try {
+            connection.setAutoCommit(false); // DÉBUT TRANSACTION
+
+            // 1. Récupérer la formation de l'étudiant
+            int formationId = -1;
+            try (PreparedStatement ps = connection.prepareStatement(sqlCheck)) {
+                ps.setInt(1, studentId);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) formationId = rs.getInt("formation_id");
             }
+
+            // 2. Vérifier que le cours appartient bien à cette formation (Règle Métier Java)
+            boolean isAllowed = false;
+            try (PreparedStatement ps = connection.prepareStatement(sqlVerify)) {
+                ps.setInt(1, formationId);
+                ps.setInt(2, coursId);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) isAllowed = true;
+            }
+
+            if (!isAllowed) {
+                throw new SQLException("Règle violée : Ce cours ne fait pas partie de la filière de l'étudiant.");
+            }
+
+            // 3. Inscription
+            try (PreparedStatement ps = connection.prepareStatement(sqlInsert)) {
+                ps.setInt(1, studentId);
+                ps.setInt(2, coursId);
+                ps.executeUpdate();
+            }
+
+            connection.commit(); // VALIDER TRANSACTION
+        } catch (SQLException e) {
+            connection.rollback(); // ANNULER EN CAS D'ERREUR
+            throw e;
+        } finally {
+            connection.setAutoCommit(true); // Remettre en mode normal
         }
-        return list;
     }
 }

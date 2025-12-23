@@ -1,6 +1,7 @@
 package com.example.gestionacademique.dao;
 
 import com.example.gestionacademique.modele.Formation;
+import com.example.gestionacademique.modele.Cours;
 import java.sql.*;
 import java.util.ArrayList; // Import needed
 import java.util.List;

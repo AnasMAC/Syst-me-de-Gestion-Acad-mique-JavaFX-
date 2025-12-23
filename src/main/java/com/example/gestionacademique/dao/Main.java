@@ -1,104 +1,146 @@
 package com.example.gestionacademique.dao;
 
-import com.example.gestionacademique.dao.FormationImp;
-import com.example.gestionacademique.dao.StudentImp;
+import com.example.gestionacademique.modele.Cours;
+import com.example.gestionacademique.modele.DossierAdministratif;
 import com.example.gestionacademique.modele.Formation;
 import com.example.gestionacademique.modele.Student;
 
+import java.sql.Date; // Important pour DossierAdministratif
+import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 
 public class Main {
 
     public static void main(String[] args) {
-        System.out.println("--- Starting Application Test ---");
+        System.out.println("==========================================");
+        System.out.println("   DÉMARRAGE DES TESTS D'INTÉGRATION");
+        System.out.println("==========================================");
 
         try {
-            // 1. Initialize DAOs
+            // 1. Initialisation des DAOs
             FormationImp formationDao = new FormationImp();
             StudentImp studentDao = new StudentImp();
+            CoursImp coursDao = new CoursImp();
+            DossierAdministratifImp dossierDao = new DossierAdministratifImp();
 
             // ==========================================
-            // TEST 1: CREATION (Formation)
+            // TEST 1: CRÉATION FORMATIONS & COURS
             // ==========================================
-            System.out.println("\n[1] Creating Formations...");
+            System.out.println("\n--- [1] Initialisation des Données de base ---");
 
-            // Note: ID is null because Postgres generates it (SERIAL)
-            formationDao.create(new Formation(null, "Informatique"));
-            formationDao.create(new Formation(null, "Gestion"));
+            // Création Formations
+            formationDao.create(new Formation(0, "CS")); // ID 0 ignoré (Serial)
+            formationDao.create(new Formation(0, "EC"));
 
-            // Reload from DB to get the generated IDs
-            List<Formation> allFormations = formationDao.findAll();
-            System.out.println("-> Formations in DB: " + allFormations.size());
+            // Récupération des IDs générés (Indispensable pour la suite)
+            List<Formation> formations = formationDao.findAll();
+            int idInfo = formations.get(formations.size() - 2).getId(); // Avant-dernier ajout
+            int idGestion = formations.get(formations.size() - 1).getId(); // Dernier ajout
+            System.out.println("✅ Formations créées : Info(ID=" + idInfo + "), Gestion(ID=" + idGestion + ")");
 
-            // Get the ID of the first formation (e.g., "Informatique")
-            Formation infoFormation = allFormations.get(0);
-            Integer infoId = infoFormation.getId();
-            System.out.println("-> Selected Formation: " + infoFormation.getName() + " (ID: " + infoId + ")");
+            // Création Cours
+            coursDao.create(new Cours(0, "JAVA-101", "Java Basics"));
+            coursDao.create(new Cours(0, "COMPTA-200", "Comptabilité Générale"));
 
-
-            // ==========================================
-            // TEST 2: CREATION (Student - Valid)
-            // ==========================================
-            System.out.println("\n[2] Creating a Valid Student...");
-
-            Student s1 = new Student(null, "Alice", 15.5, infoId);
-            studentDao.create(s1);
-            System.out.println("-> Alice added successfully.");
+            List<Cours> courses = coursDao.findAll();
+            int idJava = courses.get(courses.size() - 2).getId();
+            int idCompta = courses.get(courses.size() - 1).getId();
+            System.out.println("✅ Cours créés : Java(ID=" + idJava + "), Compta(ID=" + idCompta + ")");
 
 
             // ==========================================
-            // TEST 3: VALIDATION (Student - Invalid)
+            // TEST 2: ASSOCIATION FORMATION - COURS
             // ==========================================
-            System.out.println("\n[3] Testing Validation (Bad Grade)...");
+            System.out.println("\n--- [2] Association Cours <-> Formation ---");
 
+            // On dit que JAVA est pour INFORMATIQUE
+            coursDao.addCoursToFormation(idInfo, idJava);
+
+            // On dit que COMPTA est pour GESTION
+            coursDao.addCoursToFormation(idGestion, idCompta);
+
+            System.out.println("✅ Associations effectuées.");
+
+            // Vérification
+            List<Cours> coursInfo = coursDao.getCoursByFormation(idInfo);
+            System.out.println("-> Cours en Informatique : " + coursInfo.size() + " trouvé(s).");
+
+
+            // ==========================================
+            // TEST 3: CRÉATION ÉTUDIANT
+            // ==========================================
+            System.out.println("\n--- [3] Création d'un Étudiant ---");
+
+            Student alice = new Student(0, "Alice Dev", 16.5, idInfo); // Alice est en INFO
+            studentDao.create(alice);
+
+            // Récupérer ID Alice
+            int idAlice = studentDao.findAll().stream()
+                    .filter(s -> s.getName().equals("Alice Dev"))
+                    .findFirst().get().getId();
+
+            System.out.println("✅ Alice ajoutée en Informatique (ID=" + idAlice + ")");
+
+
+            // ==========================================
+            // TEST 4: INSCRIPTION COURS (Transaction)
+            // ==========================================
+            System.out.println("\n--- [4] Test des Transactions d'Inscription ---");
+
+            // A. SCÉNARIO SUCCÈS : Alice (Info) s'inscrit en Java (Cours Info)
+            System.out.print("👉 Tentative 1 (Valide) : Alice -> Java... ");
             try {
-                // This should trigger your IllegalArgumentException immediately
-                System.out.println("-> Attempting to create Bob with grade 25.0...");
-                Student s2 = new Student(null, "Bob", 25.0, infoId);
+                studentDao.inscrireEtudiantAuCours(idAlice, idJava);
+                System.out.println("✅ SUCCÈS (Attendu)");
+            } catch (SQLException e) {
+                System.out.println("❌ ERREUR : " + e.getMessage());
+            }
 
-                // If the line above works, we have a problem.
-                studentDao.create(s2);
-                System.err.println("❌ ERROR: Bob was added but shouldn't be!");
-
-            } catch (IllegalArgumentException e) {
-                // We expect to land here
-                System.out.println("✅ SUCCESS: Validation caught the error!");
-                System.out.println("   Message: " + e.getMessage());
+            // B. SCÉNARIO ÉCHEC : Alice (Info) essaie de s'inscrire en Compta (Cours Gestion)
+            System.out.print("👉 Tentative 2 (Interdite) : Alice -> Compta... ");
+            try {
+                studentDao.inscrireEtudiantAuCours(idAlice, idCompta);
+                System.out.println("❌ ÉCHEC : Aurait du être bloqué !");
+            } catch (SQLException e) {
+                System.out.println("✅ BLOQUÉ (Attendu) : " + e.getMessage());
             }
 
 
             // ==========================================
-            // TEST 4: UPDATE
+            // TEST 5: DOSSIER ADMINISTRATIF
             // ==========================================
-            System.out.println("\n[4] Testing Update...");
+            System.out.println("\n--- [5] Gestion Dossier Administratif ---");
 
-            // Retrieve Alice (we need her ID)
-            List<Student> students = studentDao.findAll();
-            if (!students.isEmpty()) {
-                Student alice = students.get(0); // Assuming Alice is first
-                System.out.println("-> Before Update: " + alice);
+            DossierAdministratif dossier = new DossierAdministratif(
+                    0,
+                    "MAT-2025-ALICE",
+                    Date.valueOf(LocalDate.now()), // Conversion LocalDate -> SQL Date
+                    idAlice
+            );
 
-                // Change grade using the secure setter
-                alice.setMoyenne(19.0);
+            dossierDao.create(dossier);
+            System.out.println("✅ Dossier créé pour Alice.");
 
-                // Update in DB
-                studentDao.update(alice);
 
-                // Check if DB is updated
-                Student updatedAlice = studentDao.findById(alice.getId()).get();
-                System.out.println("-> After Update:  " + updatedAlice);
-            }
 
-            // ==========================================
-            // TEST 5: READ ALL
-            // ==========================================
-            System.out.println("\n[5] Final List of Students:");
-            for (Student s : studentDao.findAll()) {
-                System.out.println("   - ID: " + s.getId() + " | Nom: " + s.getName() + " | Moy: " + s.getMoyenne());
+            // Test contrainte unique (Optionnel)
+            System.out.print("👉 Tentative création doublon dossier... ");
+            try {
+                dossierDao.create(dossier); // Devrait planter car student_id unique
+            } catch (SQLException e) {
+                System.out.println("✅ BLOQUÉ (Attendu) : Un seul dossier par élève.");
             }
 
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            // ==========================================
+            // TEST 6: NETTOYAGE
+            // ==========================================
+            System.out.println("\n--- [6] Fermeture ---");
+
+            System.out.println("Fin du programme.");
         }
     }
 }
