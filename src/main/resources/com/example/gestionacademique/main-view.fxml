@@ -6,6 +6,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
+
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.gestionacademique.Controllers.MainController">
 
@@ -31,6 +32,18 @@
             <Tab text="  Gestion Formations  ">
                 <content>
                     <fx:include fx:id="formationView" source="formation-view.fxml"/>
+                </content>
+            </Tab>
+
+            <Tab text="  Gestion Cours  ">
+                <content>
+                    <fx:include fx:id="coursView" source="cours-view.fxml"/>
+                </content>
+            </Tab>
+
+            <Tab text="  Dossiers Administratifs  ">
+                <content>
+                    <fx:include fx:id="dossierView" source="dossier-view.fxml"/>
                 </content>
             </Tab>
 

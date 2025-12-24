@@ -82,4 +82,20 @@ public class FormationImp implements CRUD<Formation, Integer> {
         }
         return allFormations;
     }
+
+    public List<Formation> getFormationbyCourses(int coursid) throws SQLException {
+        List<Formation> formations = new ArrayList<>();
+        String sql = "SELECT f.* FROM formation f " +
+                "JOIN Formation_Cours fc ON f.id = fc.formation_id " +
+                "WHERE fc.cours_id = ?";
+        try(PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, coursid);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    formations.add(new Formation(rs.getInt("id"), rs.getString("name")));
+                }
+            }
+        }
+        return formations;
+    }
 }

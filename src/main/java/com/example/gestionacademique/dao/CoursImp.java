@@ -102,6 +102,14 @@ public class CoursImp implements CRUD<Cours, Integer> {
         }
     }
 
+    public void removeCoursFromFormation(int coursId) throws SQLException {
+        String sql = "DELETE FROM Formation_Cours WHERE cours_id = ?";
+        try(PreparedStatement ps = connection.prepareStatement(sql)){
+            ps.setInt(1, coursId);
+            ps.executeUpdate();
+        }
+    }
+
     public List<Cours> getCoursByFormation(int formationId) throws SQLException {
         List<Cours> liste = new ArrayList<>();
         String sql = "SELECT c.* FROM Cours c " +
