@@ -140,4 +140,19 @@ public class StudentImp implements CRUD<Student, Integer> {
             connection.setAutoCommit(true); // Remettre en mode normal
         }
     }
+
+    public List<Integer> getCoursforStrudent(int studentId) throws SQLException {
+        String sql = "select cours_id from Student_Cours where student_id=?";
+        List<Integer> coursIds = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            try(ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Integer courid = rs.getInt("cours_id");
+                    coursIds.add(courid);
+                }
+            }
+        }
+        return coursIds;
+    }
 }

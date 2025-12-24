@@ -90,7 +90,6 @@ public class DossierAdministratifImp implements CRUD<DossierAdministratif, Integ
         return list;
     }
 
-    // --- Helper pour éviter la répétition du mapping ---
     private DossierAdministratif mapResultSetToDossier(ResultSet rs) throws SQLException {
         return new DossierAdministratif(
                 rs.getInt("id"),

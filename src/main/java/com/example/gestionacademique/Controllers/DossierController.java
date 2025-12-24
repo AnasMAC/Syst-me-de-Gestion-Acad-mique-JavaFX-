@@ -1,27 +1,37 @@
 package com.example.gestionacademique.Controllers;
 
 import com.example.gestionacademique.dao.DossierAdministratifImp;
+import com.example.gestionacademique.dao.StudentImp;
 import com.example.gestionacademique.modele.DossierAdministratif;
+import com.example.gestionacademique.modele.Student;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyEvent;
 
 import java.net.URL;
 import java.sql.Date; // Attention: java.sql.Date pour la compatibilité avec votre Modèle
 import java.sql.SQLException;
-import java.time.LocalDate;
+import java.util.List;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
 
 public class DossierController implements Initializable {
+
 
     // --- FXML INJECTIONS ---
     @FXML private TextField txtId;
     @FXML private TextField txtNumero;
     @FXML private DatePicker dpDate; // On utilise un DatePicker pour la date
-    @FXML private TextField txtStudentId; // On entre l'ID étudiant manuellement pour l'instant
+    @FXML private TextField txtStudentId;
+
+
+    @FXML private TextField txtSearch;
+// On entre l'ID étudiant manuellement pour l'instant
 
     @FXML private Button btnAdd;
     @FXML private Button btnUpdate;
@@ -31,24 +41,35 @@ public class DossierController implements Initializable {
     @FXML private TableColumn<DossierAdministratif, Integer> colId;
     @FXML private TableColumn<DossierAdministratif, String> colNumero;
     @FXML private TableColumn<DossierAdministratif, Date> colDate;
-    @FXML private TableColumn<DossierAdministratif, Integer> colStudentId;
+    @FXML private TableColumn<DossierAdministratif,String> colStudentName;
+
 
     // Data List
     private ObservableList<DossierAdministratif> dossierList = FXCollections.observableArrayList();
-
+    private ObservableList<Student> studentList = FXCollections.observableArrayList();
     // DAO
     private DossierAdministratifImp dossierImp;
+    private StudentImp studentImp;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         try {
             dossierImp = new DossierAdministratifImp();
+            studentImp = new StudentImp();
 
             // 1. LINK COLUMNS TO MODEL
             colId.setCellValueFactory(new PropertyValueFactory<>("id"));
             colNumero.setCellValueFactory(new PropertyValueFactory<>("numeroInscription"));
             colDate.setCellValueFactory(new PropertyValueFactory<>("dateCreation"));
-            colStudentId.setCellValueFactory(new PropertyValueFactory<>("studentId"));
+            colStudentName.setCellValueFactory(cellData -> {
+                int studentId = cellData.getValue().getStudentId();
+                String studentName = studentList.stream()
+                        .filter(s -> s.getId() == studentId)
+                        .findFirst()
+                        .map(Student::getName)
+                        .orElse("ID: " + studentId);
+                return new SimpleStringProperty(studentName);
+            });
 
             // Bind List
             tableDossier.setItems(dossierList);
@@ -94,8 +115,6 @@ public class DossierController implements Initializable {
                 return;
             }
 
-            // Create Object
-            // Note: Date.valueOf(LocalDate) convertit la date du DatePicker vers SQL Date
             DossierAdministratif dossier = new DossierAdministratif(
                     0,
                     txtNumero.getText(),
@@ -157,22 +176,22 @@ public class DossierController implements Initializable {
         txtNumero.clear();
         dpDate.setValue(null);
         txtStudentId.clear();
+        txtSearch.clear();
 
+        tableDossier.setItems(dossierList);
         tableDossier.getSelectionModel().clearSelection();
 
         btnUpdate.setDisable(true);
         btnDelete.setDisable(true);
         btnAdd.setDisable(false);
     }
-
     public void refreshTable() {
         try {
-            System.out.println("Refreshing Dossier Table...");
-            dossierList.setAll(dossierImp.findAll());
-            tableDossier.setItems(dossierList);
+            studentList.setAll(studentImp.findAll()); // Reload students for names
+            dossierList.setAll(dossierImp.findAll()); // Reload dossiers
+            tableDossier.refresh();
         } catch (SQLException e) {
             e.printStackTrace();
-            showError("Connexion", "Impossible de charger les dossiers : " + e.getMessage());
         }
     }
 
@@ -181,5 +200,59 @@ public class DossierController implements Initializable {
         alert.setTitle(title);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    @FXML
+    void onSearch() {
+        String text = txtSearch.getText().toLowerCase().trim();
+
+        // 1. Si la recherche est vide, on remet tout
+        if (text.isEmpty()) {
+            tableDossier.setItems(dossierList);
+            return;
+        }
+
+        // 2. Analyse de la requête (Parsing)
+        String type = "";
+        String value = text;
+
+        if (text.contains(":")) {
+            // On sépare seulement si ":" existe
+            String[] parts = text.split(":", 2); // Le '2' limite la coupe en 2 morceaux max
+            type = parts[0].trim();
+            if (parts.length > 1) {
+                value = parts[1].trim();
+            }
+        }
+
+        final String searchType = type; // Variable effective final pour le stream
+        final String searchValue = value;
+
+        List<DossierAdministratif> filtered = dossierList.stream()
+                .filter(dossier -> {
+                    // Récupérer le nom de l'étudiant associé
+                    String studentName = studentList.stream()
+                            .filter(s -> s.getId() == dossier.getStudentId())
+                            .findFirst()
+                            .map(Student::getName)
+                            .orElse("")
+                            .toLowerCase();
+
+                    String matricule = dossier.getNumeroInscription().toLowerCase();
+
+                    // 3. Logique de filtrage
+                    if (searchType.equals("name") || searchType.equals("nom")) {
+                        return studentName.contains(searchValue);
+                    } else if (searchType.equals("mat") || searchType.equals("matricule")) {
+                        return matricule.contains(searchValue);
+                    } else {
+                        // RECHERCHE GLOBALE (Si pas de type précisé ou type inconnu)
+                        // On cherche dans le nom OU le matricule
+                        return studentName.contains(searchValue) || matricule.contains(searchValue);
+                    }
+                })
+                .collect(Collectors.toList());
+
+        tableDossier.setItems(FXCollections.observableArrayList(filtered));
     }
 }

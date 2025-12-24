@@ -33,13 +33,13 @@ public class MainController implements Initializable {
                         if (studentViewController != null) studentViewController.refreshTable();
                         break;
                     case "Gestion Formations":
-                        // formationViewController.refreshTable(); // Si cette méthode existe
+                        if(formationViewController != null) formationViewController.refreshTable(); // Si cette méthode existe
                         break;
                     case "Gestion Cours":
                         if (coursViewController != null) coursViewController.refreshTable();
                         break;
                     case "Dossiers Administratifs":
-                        if (dossierViewController != null);
+                        if (dossierViewController != null) dossierViewController.refreshTable();
                         break;
                 }
             }
